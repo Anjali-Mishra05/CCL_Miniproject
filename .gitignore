@@ -1,0 +1,13 @@
+.env.example
+node_modules/
+*.log
+*.swp
+*.swo
+.DS_Store
+.serverless/
+.dynamodb/
+__pycache__/
+.pytest_cache/
+build/
+dist/
+*.egg-info/

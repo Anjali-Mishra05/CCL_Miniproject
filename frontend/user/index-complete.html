@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PetMatch - Lost & Found Pet Recovery</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar" style="display: none;">
+        <div class="nav-container">
+            <div class="logo">
+                <i class="fas fa-paw"></i> PetMatch
+            </div>
+            <ul class="nav-menu">
+                <li><a href="#" id="nav-home"><i class="fas fa-home"></i> Home</a></li>
+                <li><a href="#" id="nav-browse"><i class="fas fa-search"></i> Browse</a></li>
+                <li><a href="#" id="nav-report"><i class="fas fa-plus"></i> Report</a></li>
+                <li><a href="#" id="nav-matches"><i class="fas fa-check-circle"></i> Matches</a></li>
+                <li><a href="#" id="nav-profile"><i class="fas fa-user-circle"></i> Profile</a></li>
+                <li><a href="#" id="nav-logout"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Auth Page - Premium Design -->
+    <section id="auth-page" class="page auth-page-premium">
+        <div class="auth-bg-overlay"></div>
+        
+        <div class="auth-container-premium">
+            <!-- Left Side - Brand/Info -->
+            <div class="auth-left-premium">
+                <div class="auth-brand-section">
+                    <div class="brand-icon">🐾</div>
+                    <h1 class="brand-title">PetMatch</h1>
+                    <p class="brand-tagline">Reunite Pets with Their Families</p>
+                    
+                    <div class="features-list">
+                        <div class="feature-item">
+                            <i class="fas fa-heart"></i>
+                            <span>Report Lost Pets</span>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fas fa-search"></i>
+                            <span>AI-Powered Matching</span>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fas fa-bell"></i>
+                            <span>Real-time Notifications</span>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fas fa-shield-alt"></i>
+                            <span>Secure & Private</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Side - Auth Forms -->
+            <div class="auth-right-premium">
+                <div class="auth-card-premium">
+                    <!-- Login Form -->
+                    <div id="login-section" class="auth-section active">
+                        <h2>Welcome Back</h2>
+                        <p class="auth-subtitle">Sign in to your PetMatch account</p>
+                        
+                        <form id="login-form" class="auth-form-premium">
+                            <div class="form-group">
+                                <label for="login-email">
+                                    <i class="fas fa-envelope"></i> Email Address
+                                </label>
+                                <input 
+                                    type="email" 
+                                    id="login-email" 
+                                    placeholder="you@example.com"
+                                    required
+                                >
+                            </div>
+
+                            <div class="form-group">
+                                <label for="login-password">
+                                    <i class="fas fa-lock"></i> Password
+                                </label>
+                                <div class="password-input-wrapper">
+                                    <input 
+                                        type="password" 
+                                        id="login-password" 
+                                        placeholder="Enter your password"
+                                        required
+                                    >
+                                    <button type="button" class="toggle-password" onclick="togglePassword('login-password')">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="remember-forget">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="remember-me">
+                                    <span>Remember me</span>
+                                </label>
+                                <a href="#" class="forgot-password-link">Forgot password?</a>
+                            </div>
+
+                            <button type="submit" class="btn-auth-primary">
+                                <span>Sign In</span>
+                                <i class="fas fa-arrow-right"></i>
+                            </button>
+
+                            <div class="form-divider">OR</div>
+
+                            <button type="button" class="btn-auth-social google-btn">
+                                <i class="fab fa-google"></i> Sign in with Google
+                            </button>
+                        </form>
+
+                        <div class="auth-footer">
+                            Don't have an account? 
+                            <button type="button" class="link-btn" id="switch-to-signup">Create one</button>
+                        </div>
+                    </div>
+
+                    <!-- Sign Up Form -->
+                    <div id="signup-section" class="auth-section">
+                        <h2>Create Account</h2>
+                        <p class="auth-subtitle">Join PetMatch to help reunite lost pets</p>
+                        
+                        <form id="signup-form" class="auth-form-premium">
+                            <div class="form-group">
+                                <label for="signup-name">
+                                    <i class="fas fa-user"></i> Full Name
+                                </label>
+                                <input 
+                                    type="text" 
+                                    id="signup-name" 
+                                    placeholder="John Doe"
+                                    required
+                                >
+                            </div>
+
+                            <div class="form-group">
+                                <label for="signup-email">
+                                    <i class="fas fa-envelope"></i> Email Address
+                                </label>
+                                <input 
+                                    type="email" 
+                                    id="signup-email" 
+                                    placeholder="you@example.com"
+                                    required
+                                >
+                            </div>
+
+                            <div class="form-group">
+                                <label for="signup-phone">
+                                    <i class="fas fa-phone"></i> Phone Number
+                                </label>
+                                <input 
+                                    type="tel" 
+                                    id="signup-phone" 
+                                    placeholder="+1 (555) 000-0000"
+                                    required
+                                >
+                            </div>
+
+                            <div class="form-group">
+                                <label for="signup-password">
+                                    <i class="fas fa-lock"></i> Password
+                                </label>
+                                <div class="password-input-wrapper">
+                                    <input 
+                                        type="password" 
+                                        id="signup-password" 
+                                        placeholder="Create a strong password"
+                                        required
+                                        oninput="checkPasswordStrength(this.value)"
+                                    >
+                                    <button type="button" class="toggle-password" onclick="togglePassword('signup-password')">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                                <div class="password-strength">
+                                    <div class="strength-bar" id="strength-bar"></div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="signup-confirm">
+                                    <i class="fas fa-check-circle"></i> Confirm Password
+                                </label>
+                                <div class="password-input-wrapper">
+                                    <input 
+                                        type="password" 
+                                        id="signup-confirm" 
+                                        placeholder="Confirm your password"
+                                        required
+                                    >
+                                    <button type="button" class="toggle-password" onclick="togglePassword('signup-confirm')">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <label class="checkbox-label checkbox-terms">
+                                <input type="checkbox" id="agree-terms" required>
+                                <span>I agree to the <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a></span>
+                            </label>
+
+                            <button type="submit" class="btn-auth-primary">
+                                <span>Create Account</span>
+                                <i class="fas fa-arrow-right"></i>
+                            </button>
+
+                            <div class="form-divider">OR</div>
+
+                            <button type="button" class="btn-auth-social google-btn">
+                                <i class="fab fa-google"></i> Sign up with Google
+                            </button>
+                        </form>
+
+                        <div class="auth-footer">
+                            Already have an account? 
+                            <button type="button" class="link-btn" id="switch-to-login">Sign in</button>
+                        </div>
+                    </div>
+
+                    <!-- Auth Messages -->
+                    <div id="auth-message" class="auth-message"></div>
+                    <div id="auth-loader" class="auth-loader" style="display: none;">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Home Page -->
+    <section id="home-page" class="page" style="display:none;">
+        <div class="home-container">
+            <div class="hero-section">
+                <h1>Welcome to PetMatch</h1>
+                <p>Help reunite lost pets with their families using AI-powered matching</p>
+                <div class="hero-actions">
+                    <button class="btn-primary" id="btn-report-lost">
+                        <i class="fas fa-heart-broken"></i> Report Lost Pet
+                    </button>
+                    <button class="btn-secondary" id="btn-report-found">
+                        <i class="fas fa-paw"></i> Report Found Pet
+                    </button>
+                </div>
+            </div>
+
+            <div class="stats-section">
+                <div class="stat-card">
+                    <div class="stat-icon" style="color: #FF6B6B;">
+                        <i class="fas fa-heart-broken"></i>
+                    </div>
+                    <h3 id="stat-lost">0</h3>
+                    <p>Lost Pets</p>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="color: #4ECDC4;">
+                        <i class="fas fa-paw"></i>
+                    </div>
+                    <h3 id="stat-found">0</h3>
+                    <p>Found Pets</p>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="color: #2ECC71;">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <h3 id="stat-matched">0</h3>
+                    <p>Successfully Matched</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Browse Pets Page -->
+    <section id="browse-page" class="page" style="display:none;">
+        <div class="browse-container">
+            <div class="browse-header">
+                <h1>Browse Pets</h1>
+                <p>Find lost or found pets in your area</p>
+            </div>
+            
+            <div class="filters-section">
+                <div class="filter-group">
+                    <label>Pet Type</label>
+                    <select id="filter-type" class="filter-input">
+                        <option value="">All Types</option>
+                        <option value="lost">Lost</option>
+                        <option value="found">Found</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label>Species</label>
+                    <select id="filter-species" class="filter-input">
+                        <option value="">All Species</option>
+                        <option value="dog">Dog</option>
+                        <option value="cat">Cat</option>
+                        <option value="bird">Bird</option>
+                        <option value="rabbit">Rabbit</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label>Location</label>
+                    <input 
+                        type="text" 
+                        id="filter-location" 
+                        placeholder="Search by location"
+                        class="filter-input"
+                    >
+                </div>
+
+                <button id="btn-filter" class="btn-primary">
+                    <i class="fas fa-search"></i> Search
+                </button>
+            </div>
+
+            <div id="pets-list" class="pets-grid">
+                <!-- Pet cards will be loaded here -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Report Pet Page -->
+    <section id="report-page" class="page" style="display:none;">
+        <div class="report-container">
+            <div class="report-header">
+                <h1>Report a Pet</h1>
+                <p>Help us find and reunite lost pets with their families</p>
+            </div>
+            
+            <form id="report-form" class="premium-form">
+                <div class="form-section">
+                    <h3>Pet Information</h3>
+                    
+                    <div class="form-group">
+                        <label>Pet Type *</label>
+                        <select id="pet-type" required class="form-input">
+                            <option value="">Select Type</option>
+                            <option value="lost">Lost</option>
+                            <option value="found">Found</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Species *</label>
+                        <select id="pet-species" required class="form-input">
+                            <option value="">Select Species</option>
+                            <option value="dog">Dog</option>
+                            <option value="cat">Cat</option>
+                            <option value="bird">Bird</option>
+                            <option value="rabbit">Rabbit</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Pet Name *</label>
+                        <input type="text" id="pet-name" placeholder="e.g., Fluffy" required class="form-input">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Breed/Description *</label>
+                        <input type="text" id="pet-breed" placeholder="e.g., Golden Retriever" required class="form-input">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Color/Markings</label>
+                        <input type="text" id="pet-color" placeholder="e.g., White with brown spots" class="form-input">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Description</label>
+                        <textarea id="pet-description" placeholder="Additional details about your pet..." class="form-input" rows="4"></textarea>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>Location & Date</h3>
+                    
+                    <div class="form-group">
+                        <label>Location *</label>
+                        <input type="text" id="pet-location" placeholder="Last seen location" required class="form-input">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Date <span id="lost-or-found">Lost</span> *</label>
+                        <input type="date" id="pet-date" required class="form-input">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Contact Phone *</label>
+                        <input type="tel" id="pet-phone" required class="form-input">
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>Pet Photo</h3>
+                    
+                    <div class="form-group">
+                        <label>Upload Photo *</label>
+                        <div class="file-upload">
+                            <input type="file" id="pet-image" accept="image/*" required>
+                            <div class="upload-area">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                                <p>Drag & drop or click to select image</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">
+                        <i class="fas fa-check"></i> Submit Report
+                    </button>
+                    <button type="button" id="btn-cancel-report" class="btn-secondary">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <!-- Pet Matches Page -->
+    <section id="matches-page" class="page" style="display:none;">
+        <div class="matches-container">
+            <div class="matches-header">
+                <h1>Your Pet Matches</h1>
+                <p>AI-powered matches for your reported pets</p>
+            </div>
+
+            <div id="matches-list" class="matches-grid">
+                <!-- Match cards will be loaded here -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Profile Page -->
+    <section id="profile-page" class="page" style="display:none;">
+        <div class="profile-container">
+            <div class="profile-header">
+                <h1>My Profile</h1>
+            </div>
+
+            <div class="profile-content">
+                <div class="profile-sidebar">
+                    <div class="profile-card">
+                        <div class="profile-avatar">
+                            <i class="fas fa-user-circle"></i>
+                        </div>
+                        <h3 id="profile-name">User Name</h3>
+                        <p id="profile-email">user@example.com</p>
+                        <button id="btn-edit-profile" class="btn-secondary">
+                            <i class="fas fa-edit"></i> Edit Profile
+                        </button>
+                    </div>
+
+                    <div class="profile-stats">
+                        <div class="stat">
+                            <span class="stat-label">My Reports</span>
+                            <span class="stat-value" id="profile-reports">0</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">Matched</span>
+                            <span class="stat-value" id="profile-matched">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="profile-main">
+                    <div class="profile-section">
+                        <h3>My Pet Reports</h3>
+                        <div id="my-pets-list" class="pets-list-view">
+                            <!-- User's pet reports will be loaded here -->
+                        </div>
+                    </div>
+
+                    <div class="profile-section">
+                        <h3>Account Settings</h3>
+                        <div class="settings-item">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="notifications-enabled" checked>
+                                <span>Enable email notifications</span>
+                            </label>
+                        </div>
+                        <div class="settings-item">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="location-sharing" checked>
+                                <span>Share location for better matches</span>
+                            </label>
+                        </div>
+                        <button id="btn-change-password" class="btn-secondary">
+                            <i class="fas fa-key"></i> Change Password
+                        </button>
+                        <button id="btn-delete-account" class="btn-danger">
+                            <i class="fas fa-trash"></i> Delete Account
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pet Detail Modal -->
+    <div id="pet-detail-modal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closePetDetail()">
+                <i class="fas fa-times"></i>
+            </button>
+            <div id="pet-detail-body">
+                <!-- Pet details will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <script src="auth.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

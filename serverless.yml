@@ -1,0 +1,380 @@
+service: petmatch-system
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  region: us-east-1
+  runtime: nodejs18.x
+  memorySize: 256
+  timeout: 30
+  
+  environment:
+    PETS_TABLE: ${self:service}-pets-${self:provider.stage}
+    USERS_TABLE: ${self:service}-users-${self:provider.stage}
+    MATCHES_TABLE: ${self:service}-matches-${self:provider.stage}
+    NOTIFICATIONS_TABLE: ${self:service}-notifications-${self:provider.stage}
+    S3_BUCKET: petmatch-images-${self:provider.stage}
+    COGNITO_CLIENT_ID: !Ref CognitoUserPoolClient
+    COGNITO_POOL_ID: !Ref CognitoUserPool
+    PETS_TOPIC_ARN: !Ref PetsAlertTopic
+    MATCHES_TOPIC_ARN: !Ref PetsMatchTopic
+    DEFAULT_TOPIC_ARN: !Ref DefaultNotificationTopic
+    MATCH_THRESHOLD: 80
+  
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:service}-*"
+        - Effect: Allow
+          Action:
+            - s3:GetObject
+            - s3:PutObject
+            - s3:DeleteObject
+          Resource: "arn:aws:s3:::petmatch-images-*/*"
+        - Effect: Allow
+          Action:
+            - rekognition:CompareFaces
+            - rekognition:DetectLabels
+            - rekognition:DetectFaces
+          Resource: "*"
+        - Effect: Allow
+          Action:
+            - sns:Publish
+          Resource: "*"
+        - Effect: Allow
+          Action:
+            - cognito-idp:AdminGetUser
+            - cognito-idp:InitiateAuth
+            - cognito-idp:AdminInitiateAuth
+          Resource: "*"
+
+functions:
+  # Authentication
+  authUser:
+    handler: backend/lambda/auth.authUser
+    events:
+      - http:
+          path: auth/login
+          method: post
+          cors: true
+
+  # Pet Management
+  createPet:
+    handler: backend/lambda/pets-create.createPet
+    events:
+      - http:
+          path: pets
+          method: post
+          cors: true
+          authorizer:
+            type: TOKEN
+            identitySource: method.request.header.Authorization
+
+  getPets:
+    handler: backend/lambda/pets-get.getPets
+    events:
+      - http:
+          path: pets
+          method: get
+          cors: true
+          request:
+            parameters:
+              querystrings:
+                type: false
+                species: false
+                location: false
+
+  # User Profile
+  getUserProfile:
+    handler: backend/lambda/user-profile.getUserProfile
+    events:
+      - http:
+          path: users/profile
+          method: get
+          cors: true
+          authorizer:
+            type: TOKEN
+            identitySource: method.request.header.Authorization
+
+  getUserPets:
+    handler: backend/lambda/user-pets.getUserPets
+    events:
+      - http:
+          path: pets/my-reports
+          method: get
+          cors: true
+          authorizer:
+            type: TOKEN
+            identitySource: method.request.header.Authorization
+
+  # Image Upload
+  getPresignedUrl:
+    handler: backend/lambda/upload.getPresignedUrl
+    events:
+      - http:
+          path: upload/presigned-url
+          method: post
+          cors: true
+          authorizer:
+            type: TOKEN
+            identitySource: method.request.header.Authorization
+
+  # Pet Matching (Rekognition)
+  matchPets:
+    handler: backend/lambda/pets-match.matchPets
+    events:
+      - http:
+          path: pets/match
+          method: post
+          cors: true
+          authorizer:
+            type: TOKEN
+            identitySource: method.request.header.Authorization
+
+  # Dashboard Stats
+  getDashboardStats:
+    handler: backend/lambda/dashboard-stats.getDashboardStats
+    events:
+      - http:
+          path: pets/stats
+          method: get
+          cors: true
+
+  # SNS Notifications
+  sendNotification:
+    handler: backend/lambda/sns-notify.sendNotification
+    events:
+      - http:
+          path: notifications/send
+          method: post
+          cors: true
+          authorizer:
+            type: TOKEN
+            identitySource: method.request.header.Authorization
+
+  # Admin Functions
+  adminGetUsers:
+    handler: backend/lambda/admin-users.getUsers
+    events:
+      - http:
+          path: admin/users
+          method: get
+          cors: true
+          authorizer:
+            type: TOKEN
+            identitySource: method.request.header.Authorization
+
+  adminGetDashboard:
+    handler: backend/lambda/admin-dashboard.getAdminDashboard
+    events:
+      - http:
+          path: admin/dashboard
+          method: get
+          cors: true
+          authorizer:
+            type: TOKEN
+            identitySource: method.request.header.Authorization
+
+  adminGetAllPets:
+    handler: backend/lambda/admin-pets.getAllPets
+    events:
+      - http:
+          path: admin/pets
+          method: get
+          cors: true
+          authorizer:
+            type: TOKEN
+            identitySource: method.request.header.Authorization
+
+  adminGetMatches:
+    handler: backend/lambda/admin-matches.getMatches
+    events:
+      - http:
+          path: admin/matches
+          method: get
+          cors: true
+          authorizer:
+            type: TOKEN
+            identitySource: method.request.header.Authorization
+
+resources:
+  Resources:
+    # DynamoDB Tables
+    PetsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:service}-pets-${self:provider.stage}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: createdAt
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: userIdIndex
+            KeySchema:
+              - AttributeName: userId
+                KeyType: HASH
+              - AttributeName: createdAt
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+        StreamSpecification:
+          StreamViewType: NEW_AND_OLD_IMAGES
+
+    UsersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:service}-users-${self:provider.stage}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+          - AttributeName: email
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: emailIndex
+            KeySchema:
+              - AttributeName: email
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+
+    MatchesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:service}-matches-${self:provider.stage}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+          - AttributeName: lostPetId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: lostPetIdIndex
+            KeySchema:
+              - AttributeName: lostPetId
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+
+    NotificationsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:service}-notifications-${self:provider.stage}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+          - AttributeName: sentAt
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        TimeToLiveSpecification:
+          AttributeName: ttl
+          Enabled: true
+
+    # S3 Bucket for Images
+    ImagesBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: petmatch-images-${self:provider.stage}
+        VersioningConfiguration:
+          Status: Enabled
+        LifecycleConfiguration:
+          Rules:
+            - Id: DeleteOldVersions
+              NoncurrentVersionExpirationInDays: 90
+              Status: Enabled
+
+    # SNS Topics
+    PetsAlertTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: petmatch-pets-alert-${self:provider.stage}
+        DisplayName: PetMatch Pet Alerts
+
+    PetsMatchTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: petmatch-match-alert-${self:provider.stage}
+        DisplayName: PetMatch Match Alerts
+
+    DefaultNotificationTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: petmatch-notifications-${self:provider.stage}
+        DisplayName: PetMatch Notifications
+
+    # Cognito User Pool
+    CognitoUserPool:
+      Type: AWS::Cognito::UserPool
+      Properties:
+        UserPoolName: ${self:service}-user-pool-${self:provider.stage}
+        UsernameAttributes:
+          - email
+        AutoVerifiedAttributes:
+          - email
+        Policies:
+          PasswordPolicy:
+            MinimumLength: 8
+            RequireLowercase: true
+            RequireNumbers: true
+            RequireSymbols: true
+            RequireUppercase: true
+
+    # Cognito User Pool Client
+    CognitoUserPoolClient:
+      Type: AWS::Cognito::UserPoolClient
+      Properties:
+        ClientName: ${self:service}-client-${self:provider.stage}
+        UserPoolId: !Ref CognitoUserPool
+        ExplicitAuthFlows:
+          - ADMIN_NO_SRP_AUTH
+          - USER_PASSWORD_AUTH
+        GenerateSecret: false
+
+  Outputs:
+    ServiceEndpoint:
+      Description: "URL for the API Gateway"
+      Value:
+        Fn::Join:
+          - ""
+          - - "https://"
+            - Ref: "ApiGatewayRestApi"
+            - ".execute-api.${self:provider.region}.amazonaws.com/${self:provider.stage}"
+    CognitoUserPoolId:
+      Description: "Cognito User Pool ID"
+      Value: !Ref CognitoUserPool
+    CognitoClientId:
+      Description: "Cognito Client ID"
+      Value: !Ref CognitoUserPoolClient
+    S3BucketName:
+      Description: "S3 Bucket Name"
+      Value: !Ref ImagesBucket
+
+plugins:
+  - serverless-offline
+  - serverless-dynamodb-local
+  - serverless-python-requirements

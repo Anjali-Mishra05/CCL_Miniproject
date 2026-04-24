@@ -1,0 +1,25 @@
+{
+  "name": "petmatch-system",
+  "version": "1.0.0",
+  "description": "Lost & Found Pet Recovery System powered by AWS",
+  "main": "index.js",
+  "scripts": {
+    "deploy": "serverless deploy",
+    "local": "serverless offline start",
+    "test": "jest",
+    "lint": "eslint ."
+  },
+  "keywords": ["aws", "pets", "recovery", "rekognition"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "aws-sdk": "^2.1400.0",
+    "axios": "^1.4.0",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "serverless": "^3.30.0",
+    "serverless-offline": "^12.0.0",
+    "serverless-dynamodb-local": "^0.2.0"
+  }
+}
