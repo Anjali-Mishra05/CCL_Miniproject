@@ -1,0 +1,109 @@
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb";
+
+const client = new DynamoDBClient({});
+const dynamo = DynamoDBDocumentClient.from(client);
+
+// ================= MAIN HANDLER =================
+
+export const handler = async (event) => {
+    console.log("EVENT:", JSON.stringify(event));
+
+    const headers = corsHeaders();
+
+    // HTTP API sometimes sends method here:
+    const method =
+        event.requestContext?.http?.method ||
+        event.httpMethod;
+
+    // ================= CORS PRE-FLIGHT =================
+    if (method === "OPTIONS") {
+        return {
+            statusCode: 204,
+            headers,
+            body: ""
+        };
+    }
+
+    // ================= PARSE BODY =================
+    let body;
+
+    try {
+        body = typeof event.body === "string"
+            ? JSON.parse(event.body)
+            : event.body;
+    } catch (err) {
+        return {
+            statusCode: 400,
+            headers,
+            body: JSON.stringify({
+                message: "Invalid JSON"
+            })
+        };
+    }
+
+    // ================= VALIDATION =================
+    if (!body?.name || !body?.email || !body?.password) {
+        return {
+            statusCode: 400,
+            headers,
+            body: JSON.stringify({
+                message: "name, email, password required"
+            })
+        };
+    }
+
+    // ================= CREATE USER =================
+    const userItem = {
+        userId: Date.now().toString(),
+        name: body.name,
+        email: body.email,
+        phone: body.phone || "",
+        password: body.password, // ⚠️ hash later
+        createdAt: new Date().toISOString()
+    };
+
+    const params = {
+        TableName: "PetMatch-Users",
+        Item: userItem
+    };
+
+    try {
+        await dynamo.send(new PutCommand(params));
+
+        return {
+            statusCode: 200,
+            headers,
+            body: JSON.stringify({
+                message: "User created successfully",
+                user: {
+                    userId: userItem.userId,
+                    name: userItem.name,
+                    email: userItem.email
+                }
+            })
+        };
+
+    } catch (error) {
+        console.error("DynamoDB Error:", error);
+
+        return {
+            statusCode: 500,
+            headers,
+            body: JSON.stringify({
+                message: "Database error",
+                error: error.message
+            })
+        };
+    }
+};
+
+// ================= CORS HEADERS =================
+
+function corsHeaders() {
+    return {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "content-type",
+        "Access-Control-Allow-Methods": "POST,OPTIONS"
+    };
+}

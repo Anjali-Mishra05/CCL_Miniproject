@@ -1,11 +1,7 @@
-// AWS Cognito Configuration using centralized CONFIG
-const AWS_CONFIG = {
-    region: CONFIG.COGNITO.REGION,
-    userPoolId: CONFIG.COGNITO.USER_POOL_ID,
-    clientId: CONFIG.COGNITO.CLIENT_ID
-};
+// ==================== CONFIG ====================
+const API_BASE = CONFIG.API_BASE_URL;
 
-// ==================== AUTH UTILITY FUNCTIONS ====================
+// ==================== AUTH SERVICE ====================
 
 class AuthService {
     constructor() {
@@ -14,113 +10,96 @@ class AuthService {
         this.refreshToken = localStorage.getItem('refreshToken');
     }
 
-    // Validate password strength
+    getAuthToken() {
+        return this.authToken || localStorage.getItem("authToken");
+    }
+
+    // ==================== VALIDATIONS ====================
+    
+
     validatePasswordStrength(password) {
-        const strength = {
-            score: 0,
-            feedback: []
-        };
+        let score = 0;
 
-        if (password.length >= 8) strength.score++;
-        else strength.feedback.push('At least 8 characters');
+        if (password.length >= 8) score++;
+        if (/[A-Z]/.test(password)) score++;
+        if (/[a-z]/.test(password)) score++;
+        if (/[0-9]/.test(password)) score++;
+        if (/[!@#$%^&*]/.test(password)) score++;
 
-        if (/[A-Z]/.test(password)) strength.score++;
-        else strength.feedback.push('One uppercase letter');
-
-        if (/[a-z]/.test(password)) strength.score++;
-        else strength.feedback.push('One lowercase letter');
-
-        if (/[0-9]/.test(password)) strength.score++;
-        else strength.feedback.push('One number');
-
-        if (/[!@#$%^&*]/.test(password)) strength.score++;
-        else strength.feedback.push('One special character');
-
-        return strength;
+        return score;
     }
 
-    // Validate email format
     validateEmail(email) {
-        const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return regex.test(email);
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
     }
 
-    // Validate phone format
     validatePhone(phone) {
-        const regex = /^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/;
-        return regex.test(phone.replace(/\s/g, ''));
+        return /^[0-9]{10,15}$/.test(phone.replace(/\s/g, ''));
     }
 
-    // Sign Up
+    // ==================== SIGNUP ====================
+
     async signUp(formData) {
         try {
-            // Validate inputs
-            if (!formData.name || formData.name.trim().length < 2) {
-                throw new Error('Name must be at least 2 characters');
-            }
+            console.log("🔥 SIGNUP STARTED");
 
-            if (!this.validateEmail(formData.email)) {
-                throw new Error('Invalid email address');
-            }
+            if (!formData.name || formData.name.length < 2)
+                throw new Error("Invalid name");
 
-            if (!this.validatePhone(formData.phone)) {
-                throw new Error('Invalid phone number');
-            }
+            if (!this.validateEmail(formData.email))
+                throw new Error("Invalid email");
 
-            if (formData.password !== formData.confirm) {
-                throw new Error('Passwords do not match');
-            }
+            if (!this.validatePhone(formData.phone))
+                throw new Error("Invalid phone");
 
-            const passwordStrength = this.validatePasswordStrength(formData.password);
-            if (passwordStrength.score < 3) {
-                throw new Error('Password is too weak. ' + passwordStrength.feedback.join(', '));
-            }
+            if (this.validatePasswordStrength(formData.password) < 3)
+                throw new Error("Weak password");
 
-            // AWS Cognito signup - call backend API
-            const response = await fetch(`${CONFIG.API_BASE_URL}/auth/signup`, {
-                method: 'POST',
+            console.log("📡 API CALL:", `${API_BASE}/users`);
+
+            const response = await fetch(`${API_BASE}${CONFIG.ENDPOINTS.SIGNUP}`, {
+                method: "POST",
                 headers: {
-                    'Content-Type': 'application/json'
+                    "Content-Type": "application/json"
                 },
                 body: JSON.stringify({
-                    email: formData.email,
-                    password: formData.password,
                     name: formData.name,
-                    phone: formData.phone
+                    email: formData.email,
+                    phone: formData.phone,
+                    password: formData.password
                 })
             });
 
             const data = await response.json();
+            console.log("📥 RESPONSE:", data);
 
             if (!response.ok) {
-                throw new Error(data.message || 'Sign up failed');
-            }
-
-            // Store tokens
-            if (data.tokens) {
-                this.storeTokens(data.tokens);
-                this.currentUser = data.user;
+                throw new Error(data.message || "Signup failed");
             }
 
             return data;
-        } catch (error) {
-            console.error('Sign up error:', error);
-            throw error;
+
+        } catch (err) {
+            console.error("❌ SIGNUP ERROR:", err);
+            throw err;
         }
     }
 
-    // Sign In
-    async signIn(email, password, rememberMe = false) {
-        try {
-            if (!email || !password) {
-                throw new Error('Email and password are required');
-            }
+    // ==================== LOGIN ====================
 
-            // AWS Cognito signin - call backend API
-            const response = await fetch(`${CONFIG.API_BASE_URL}/auth/login`, {
-                method: 'POST',
+    async signIn(email, password) {
+        try {
+            console.log("🔥 LOGIN STARTED");
+
+            if (!email || !password)
+                throw new Error("Email & password required");
+
+            console.log("📡 API CALL:", `${API_BASE}${CONFIG.ENDPOINTS.LOGIN}`);
+
+            const response = await fetch(`${API_BASE}${CONFIG.ENDPOINTS.LOGIN}`, {
+                method: "POST",
                 headers: {
-                    'Content-Type': 'application/json'
+                    "Content-Type": "application/json"
                 },
                 body: JSON.stringify({
                     email: email,
@@ -129,211 +108,157 @@ class AuthService {
             });
 
             const data = await response.json();
+            console.log("📥 RESPONSE:", data);
 
             if (!response.ok) {
-                throw new Error(data.message || 'Sign in failed');
+                throw new Error(data.message || "Login failed");
             }
 
-            // Store tokens
+            // store tokens if backend returns them
             if (data.tokens) {
-                this.storeTokens(data.tokens, rememberMe);
+                this.storeTokens(data.tokens);
                 this.currentUser = data.user;
+                const user = {
+                    name: data.user?.name,
+                    email: data.user?.email || data.email // fallback
+                };
+                localStorage.setItem("user", JSON.stringify(user));
             }
 
             return data;
-        } catch (error) {
-            console.error('Sign in error:', error);
-            throw error;
+
+        } catch (err) {
+            console.error("❌ LOGIN ERROR:", err);
+            throw err;
         }
     }
 
-    // Store authentication tokens
-    storeTokens(tokens, rememberMe = false) {
-        localStorage.setItem('authToken', tokens.accessToken);
-        localStorage.setItem('refreshToken', tokens.refreshToken);
-        
-        if (rememberMe && tokens.idToken) {
-            localStorage.setItem('idToken', tokens.idToken);
-        }
+    // ==================== TOKEN STORAGE ====================
 
+    storeTokens(tokens) {
+        localStorage.setItem("authToken", tokens.accessToken);
+        localStorage.setItem("refreshToken", tokens.refreshToken);
         this.authToken = tokens.accessToken;
-        this.refreshToken = tokens.refreshToken;
     }
 
-    // Get current auth token
-    getAuthToken() {
-        return this.authToken || localStorage.getItem('authToken');
-    }
-
-    // Check if user is authenticated
     isAuthenticated() {
-        const token = this.getAuthToken();
-        if (!token) return false;
-
-        // Check token expiry
-        try {
-            const decoded = JSON.parse(atob(token.split('.')[1]));
-            return decoded.exp * 1000 > Date.now();
-        } catch {
-            return false;
-        }
+        return !!this.authToken;
     }
 
-    // Logout
     logout() {
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('idToken');
+        localStorage.clear();
         this.currentUser = null;
         this.authToken = null;
     }
-
-    // Get current user info
-    getCurrentUser() {
-        return this.currentUser;
-    }
 }
 
-// Create global auth service instance
 const authService = new AuthService();
 
-// ==================== UI EVENT HANDLERS ====================
+// ==================== DOM EVENTS ====================
 
-// Switch between login and signup
-document.getElementById('switch-to-signup')?.addEventListener('click', (e) => {
-    e.preventDefault();
-    document.getElementById('login-section').classList.remove('active');
-    document.getElementById('signup-section').classList.add('active');
-});
+document.addEventListener("DOMContentLoaded", () => {
 
-document.getElementById('switch-to-login')?.addEventListener('click', (e) => {
-    e.preventDefault();
-    document.getElementById('signup-section').classList.remove('active');
-    document.getElementById('login-section').classList.add('active');
-});
+    console.log("✅ DOM LOADED");
 
-// Handle Login Form
-document.getElementById('login-form')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
+    // SWITCH FORMS
+    document.getElementById("switch-to-signup")?.addEventListener("click", (e) => {
+        e.preventDefault();
+        document.getElementById("login-section")?.classList.remove("active");
+        document.getElementById("signup-section")?.classList.add("active");
+    });
 
-    const email = document.getElementById('login-email').value;
-    const password = document.getElementById('login-password').value;
-    const rememberMe = document.getElementById('remember-me').checked;
+    document.getElementById("switch-to-login")?.addEventListener("click", (e) => {
+        e.preventDefault();
+        document.getElementById("signup-section")?.classList.remove("active");
+        document.getElementById("login-section")?.classList.add("active");
+    });
 
-    showAuthLoader();
+    // ==================== LOGIN ====================
 
-    try {
-        await authService.signIn(email, password, rememberMe);
-        showAuthMessage('Login successful! Redirecting...', 'success');
-        setTimeout(() => {
-            window.location.href = 'index.html?page=home';
-        }, 1500);
-    } catch (error) {
-        showAuthMessage(error.message || 'Login failed. Please try again.', 'error');
-    } finally {
-        hideAuthLoader();
+    const loginForm = document.getElementById("login-form");
+
+    if (loginForm) {
+        loginForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+
+            const email = document.getElementById("login-email")?.value;
+            const password = document.getElementById("login-password")?.value;
+
+            try {
+                await authService.signIn(email, password);
+                showMessage("Login success!", "success");
+
+                setTimeout(() => {
+                    window.location.href = "index.html";
+                }, 1000);
+
+            } catch (err) {
+                showMessage(err.message, "error");
+            }
+        });
+    }
+
+    // ==================== SIGNUP ====================
+
+    const signupForm = document.getElementById("signup-form");
+
+    if (signupForm) {
+        signupForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+
+            const formData = {
+                name: document.getElementById("signup-name")?.value,
+                email: document.getElementById("signup-email")?.value,
+                phone: document.getElementById("signup-phone")?.value,
+                password: document.getElementById("signup-password")?.value
+            };
+
+            const agree = document.getElementById("agree-terms")?.checked;
+
+            if (!agree) {
+                showMessage("Accept terms", "error");
+                return;
+            }
+
+            try {
+                await authService.signUp(formData);
+                localStorage.setItem("user", JSON.stringify({
+                    name: formData.name,
+                    email: formData.email
+                }));
+                showMessage("Signup success!", "success");
+
+                setTimeout(() => {
+                    window.location.href = "index.html";
+                }, 1000);
+
+            } catch (err) {
+                showMessage(err.message, "error");
+            }
+        });
     }
 });
 
-// Handle Signup Form
-document.getElementById('signup-form')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
+// ==================== UI ====================
 
-    const formData = {
-        name: document.getElementById('signup-name').value,
-        email: document.getElementById('signup-email').value,
-        phone: document.getElementById('signup-phone').value,
-        password: document.getElementById('signup-password').value,
-        confirm: document.getElementById('signup-confirm').value
-    };
+function showMessage(msg, type) {
+    console.log(`${type.toUpperCase()}:`, msg);
 
-    const agreeTerms = document.getElementById('agree-terms').checked;
+    const el = document.getElementById("auth-message");
+    if (!el) return;
 
-    if (!agreeTerms) {
-        showAuthMessage('You must agree to the terms and conditions', 'error');
-        return;
-    }
-
-    showAuthLoader();
-
-    try {
-        await authService.signUp(formData);
-        showAuthMessage('Account created successfully! Redirecting...', 'success');
-        setTimeout(() => {
-            window.location.href = 'index.html?page=home';
-        }, 1500);
-    } catch (error) {
-        showAuthMessage(error.message || 'Sign up failed. Please try again.', 'error');
-    } finally {
-        hideAuthLoader();
-    }
-});
-
-// ==================== UI HELPER FUNCTIONS ====================
-
-function showAuthLoader() {
-    const loader = document.getElementById('auth-loader');
-    if (loader) loader.style.display = 'flex';
-}
-
-function hideAuthLoader() {
-    const loader = document.getElementById('auth-loader');
-    if (loader) loader.style.display = 'none';
-}
-
-function showAuthMessage(message, type = 'info') {
-    const messageEl = document.getElementById('auth-message');
-    if (!messageEl) return;
-
-    messageEl.textContent = message;
-    messageEl.className = `auth-message show ${type}`;
-
-    setTimeout(() => {
-        messageEl.classList.remove('show');
-    }, 4000);
-}
-
-function togglePassword(inputId) {
-    const input = document.getElementById(inputId);
-    if (input) {
-        input.type = input.type === 'password' ? 'text' : 'password';
-    }
+    el.textContent = msg;
+    el.className = `auth-message ${type}`;
 }
 
 function checkPasswordStrength(password) {
-    const strengthBar = document.getElementById('strength-bar');
-    if (!strengthBar) return;
+    let score = 0;
 
-    const strength = authService.validatePasswordStrength(password);
-    const percentage = (strength.score / 5) * 100;
+    if (password.length >= 8) score++;
+    if (/[A-Z]/.test(password)) score++;
+    if (/[a-z]/.test(password)) score++;
+    if (/[0-9]/.test(password)) score++;
+    if (/[^A-Za-z0-9]/.test(password)) score++;
 
-    strengthBar.style.width = percentage + '%';
-
-    // Change color based on strength
-    if (strength.score < 2) {
-        strengthBar.style.backgroundColor = '#E74C3C'; // Red
-    } else if (strength.score < 4) {
-        strengthBar.style.backgroundColor = '#F39C12'; // Orange
-    } else {
-        strengthBar.style.backgroundColor = '#2ECC71'; // Green
-    }
+    return score;
 }
-
-// ==================== INITIALIZE ====================
-
-// Check if user is already logged in
-if (authService.isAuthenticated()) {
-    // Redirect to home if on auth page
-    if (document.getElementById('auth-page')) {
-        showPage('home-page');
-        document.querySelector('.navbar').style.display = 'block';
-    }
-} else {
-    // Show auth page
-    if (document.getElementById('auth-page')) {
-        showPage('auth-page');
-        document.querySelector('.navbar').style.display = 'none';
-    }
-}
-
-console.log('Auth service loaded successfully');

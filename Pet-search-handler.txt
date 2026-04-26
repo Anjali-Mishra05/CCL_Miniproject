@@ -1,0 +1,68 @@
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { DynamoDBDocumentClient, ScanCommand } from "@aws-sdk/lib-dynamodb";
+
+const client = new DynamoDBClient({ region: "us-east-1" });
+const dynamo = DynamoDBDocumentClient.from(client);
+
+export const handler = async (event) => {
+
+    console.log("EVENT:", JSON.stringify(event));
+
+    if (event.requestContext?.http?.method === "OPTIONS") {
+        return {
+            statusCode: 200,
+            headers: cors(),
+            body: ""
+        };
+    }
+
+    try {
+        const params = event.queryStringParameters || {};
+
+        const result = await dynamo.send(new ScanCommand({
+            TableName: "PetMatch-Pets"
+        }));
+
+        let pets = result.Items || [];
+
+        if (params.type) {
+            pets = pets.filter(p => p.type === params.type);
+        }
+
+        if (params.species) {
+            pets = pets.filter(p => p.species === params.species);
+        }
+
+        if (params.location) {
+            pets = pets.filter(p =>
+                p.location?.toLowerCase().includes(params.location.toLowerCase())
+            );
+        }
+
+        return {
+            statusCode: 200,
+            headers: cors(),
+            body: JSON.stringify({ pets })
+        };
+
+    } catch (err) {
+        console.error("🔥 ERROR:", err);
+
+        return {
+            statusCode: 500,
+            headers: cors(),
+            body: JSON.stringify({
+                message: err.message,
+                error: err.name
+            })
+        };
+    }
+};
+
+function cors() {
+    return {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "*",
+        "Access-Control-Allow-Methods": "GET,OPTIONS"
+    };
+}
