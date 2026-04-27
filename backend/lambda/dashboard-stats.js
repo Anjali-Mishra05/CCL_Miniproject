@@ -56,6 +56,10 @@ exports.getDashboardStats = async (event) => {
         
         return {
             statusCode: 200,
+            headers: {
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Credentials": true
+            },
             body: JSON.stringify({
                 lostCount: lostResult.Count,
                 foundCount: foundResult.Count,
@@ -66,6 +70,10 @@ exports.getDashboardStats = async (event) => {
         console.error('Dashboard stats error:', error);
         return {
             statusCode: 500,
+            headers: {
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Credentials": true
+            },
             body: JSON.stringify({ message: 'Failed to get stats', error: error.message })
         };
     }

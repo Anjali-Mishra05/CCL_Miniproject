@@ -69,9 +69,9 @@ exports.matchPets = async (event) => {
             foundPetId: foundPetId,
             lostPetName: lostPet.Item.name,
             foundPetName: foundPet.Item.name,
-            lostUserEmail: lostPet.Item.userId, // Usually we'd look up the user's email
+            lostUserEmail: lostPet.Item.userId,
             foundUserEmail: foundPet.Item.userId,
-            matchScore: matchScore,
+            confidence: Math.round(matchScore * 100), // Save as percentage
             status: matchScore > 0.6 ? 'high-confidence' : 'manual-review',
             createdAt: timestamp,
             updatedAt: timestamp

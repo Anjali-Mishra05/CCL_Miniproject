@@ -1,19 +1,20 @@
+// PetMatch Frontend Configuration
 const CONFIG = {
-    API_BASE_URL: "https://7lam20eark.execute-api.us-east-1.amazonaws.com/dev",
+    // API Gateway Base URL
+    API_BASE_URL: 'https://yy7uzqcse9.execute-api.ap-south-1.amazonaws.com/dev', 
 
-    ENDPOINTS: {
-        SIGNUP: "/user",
-        LOGIN: "/login",
-        PETS: "/pets"
-    },
-
+    // AWS Cognito Settings
     COGNITO: {
-        REGION: "us-east-1",
-        USER_POOL_ID: "",
-        CLIENT_ID: ""
+        REGION: 'ap-south-1',
+        USER_POOL_ID: 'ap-south-1_cxxYRwI9X',
+        CLIENT_ID: '3cg7oidr4jpl1g22100qapf1og'
     },
 
-    S3_BUCKET: "petmatch-images-ccl"
+    // S3 Bucket for direct uploads
+    S3_BUCKET: 'pm-img-anjal-dev'
 };
 
-window.CONFIG = CONFIG;
+// Export for use in other scripts
+if (typeof module !== 'undefined') {
+    module.exports = CONFIG;
+}

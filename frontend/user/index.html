@@ -9,7 +9,7 @@
 </head>
 <body>
     <!-- Navbar -->
-    <nav class="navbar">
+    <nav class="navbar" style="display:none;">
         <div class="nav-container">
             <div class="logo">
                 <i class="fas fa-paw"></i> PetMatch
@@ -26,7 +26,7 @@
     </nav>
 
     <!-- Auth Page - Premium Design -->
-    <section id="auth-page" class="page auth-page-premium" style="display:none;">
+    <section id="auth-page" class="page auth-page-premium">
         <div class="auth-bg-overlay"></div>
         <div class="auth-decor-paws">
             <span class="decor-paw paw-1">🐾</span>
@@ -143,31 +143,40 @@
                             <div class="form-row">
                                 <div class="form-group">
                                     <label for="signup-name"><i class="fas fa-user"></i> Full Name</label>
-                                    <input type="text" id="signup-name" class="form-input" placeholder="John Doe" required>
+                                    <input type="text" id="signup-name" class="form-input" placeholder="Anjali Mishra" required>
                                 </div>
 
                                 <div class="form-group">
                                     <label for="signup-phone"><i class="fas fa-phone"></i> Phone</label>
-                                    <input type="tel" id="signup-phone" class="form-input" placeholder="Phone" required>
+                                    <input type="tel" id="signup-phone" class="form-input" placeholder="9004223553" required>
                                 </div>
                             </div>
 
                             <div class="form-row">
                                 <div class="form-group">
                                     <label for="signup-email"><i class="fas fa-envelope"></i> Email</label>
-                                    <input type="email" id="signup-email" class="form-input" placeholder="you@mail.com" required>
+                                    <input type="email" id="signup-email" class="form-input" placeholder="anjalismishra05@gmail.com" required>
                                 </div>
 
                                 <div class="form-group">
                                     <label for="signup-password"><i class="fas fa-lock"></i> Password</label>
                                     <div class="password-input-wrapper">
-                                        <input type="password" id="signup-password" class="form-input" placeholder="Pass" required oninput="checkPasswordStrength(this.value)">
+                                        <input type="password" id="signup-password" class="form-input" placeholder="Pass" required>
                                         <button type="button" class="toggle-password" onclick="togglePassword('signup-password')">
                                             <i class="fas fa-eye"></i>
                                         </button>
                                     </div>
-                                    <div class="password-strength">
-                                        <div class="strength-bar" id="strength-bar"></div>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="signup-confirm"><i class="fas fa-check-circle"></i> Confirm Password</label>
+                                    <div class="password-input-wrapper">
+                                        <input type="password" id="signup-confirm" class="form-input" placeholder="Confirm password" required>
+                                        <button type="button" class="toggle-password" onclick="togglePassword('signup-confirm')">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -200,7 +209,7 @@
     </section>
 
     <!-- Home Page -->
-    <section id="home-page" class="page">
+    <section id="home-page" class="page" style="display:none;">
         <div class="home-decor-paws">
             <span class="decor-paw hpaw-1">🐾</span>
             <span class="decor-paw hpaw-2">🐾</span>
@@ -388,15 +397,28 @@
                             <label>Upload Photo *</label>
                             <div class="file-upload">
                                 <input type="file" id="pet-image" accept="image/*" required>
-                                <img id="image-preview"
-                                    style="display:none; width:200px; margin-top:10px; border-radius:10px;" />
                                 <div class="upload-area">
                                     <i class="fas fa-cloud-upload-alt"></i>
                                     <p>Drag & drop or click to select image</p>
                                 </div>
                             </div>
+                            <div id="image-preview" style="margin-top: 1rem;"></div>
                         </div>
                     </div>
+
+                    <div class="form-section">
+                        <div class="form-section-title">
+                            <i class="fas fa-bell"></i> Notifications
+                        </div>
+                        <div class="form-group full-width">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="receive-notifications" checked>
+                                <span>Receive notifications about potential matches</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="report-message" class="auth-message" style="margin-bottom: 1rem;"></div>
 
                     <div class="form-actions">
                         <button type="button" id="btn-cancel-report" class="btn-secondary">
@@ -512,6 +534,9 @@
     <!-- Toast Notifications -->
     <div id="toast-container" class="toast-container"></div>
 
+    <!-- AWS Cognito SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/amazon-cognito-identity-js@6.2.0/dist/amazon-cognito-identity.min.js"></script>
+    
     <script src="config.js"></script>
     <script src="auth.js"></script>
     <script src="app.js"></script>

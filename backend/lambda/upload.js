@@ -31,10 +31,14 @@ exports.getPresignedUrl = async (event) => {
             Expires: 3600 // 1 hour
         });
         
-        const fileUrl = `https://${S3_BUCKET}.s3.amazonaws.com/${fileKey}`;
+        const fileUrl = `https://${S3_BUCKET}.s3.ap-south-1.amazonaws.com/${fileKey}`;
         
         return {
             statusCode: 200,
+            headers: {
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Credentials": true
+            },
             body: JSON.stringify({
                 presignedUrl: presignedUrl,
                 fileUrl: fileUrl,
@@ -45,6 +49,10 @@ exports.getPresignedUrl = async (event) => {
         console.error('Presigned URL error:', error);
         return {
             statusCode: 500,
+            headers: {
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Credentials": true
+            },
             body: JSON.stringify({ message: 'Failed to generate presigned URL', error: error.message })
         };
     }

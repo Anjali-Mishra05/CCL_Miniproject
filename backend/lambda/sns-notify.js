@@ -1,12 +1,9 @@
-// Lambda: Send SNS Notification
-// Handler: sendNotification
+const ALERTS_TABLE = process.env.ALERTS_TABLE || 'pm-alerts';
 
 const AWS = require('aws-sdk');
 const sns = new AWS.SNS();
 const dynamodb = new AWS.DynamoDB.DocumentClient();
 const uuid = require('uuid');
-
-const NOTIFICATIONS_TABLE = process.env.NOTIFICATIONS_TABLE || 'notifications';
 
 exports.sendNotification = async (event) => {
     console.log('Send notification request:', event);
@@ -26,11 +23,11 @@ exports.sendNotification = async (event) => {
         };
         
         if (phone) {
-            publishParams.TopicArn = topic || process.env.DEFAULT_TOPIC_ARN;
+            publishParams.TopicArn = topic || process.env.ALERTS_TOPIC_ARN;
         } else if (topic) {
             publishParams.TopicArn = topic;
         } else {
-            publishParams.TopicArn = process.env.DEFAULT_TOPIC_ARN;
+            publishParams.TopicArn = process.env.ALERTS_TOPIC_ARN;
         }
         
         const result = await sns.publish(publishParams).promise();
@@ -40,7 +37,7 @@ exports.sendNotification = async (event) => {
         const timestamp = new Date().toISOString();
         
         await dynamodb.put({
-            TableName: NOTIFICATIONS_TABLE,
+            TableName: ALERTS_TABLE,
             Item: {
                 id: notificationId,
                 message: message,

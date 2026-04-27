@@ -1,27 +1,25 @@
-service: petmatch-system
-
-frameworkVersion: '3'
+service: pm
 
 provider:
   name: aws
-  region: us-east-1
+  stage: dev
+  region: ap-south-1
   runtime: nodejs18.x
   memorySize: 256
   timeout: 30
   
   environment:
-    PETS_TABLE: ${self:service}-pets-${self:provider.stage}
-    USERS_TABLE: ${self:service}-users-${self:provider.stage}
-    MATCHES_TABLE: ${self:service}-matches-${self:provider.stage}
-    NOTIFICATIONS_TABLE: ${self:service}-notifications-${self:provider.stage}
-    S3_BUCKET: petmatch-images-${self:provider.stage}
-    COGNITO_CLIENT_ID: !Ref CognitoUserPoolClient
-    COGNITO_POOL_ID: !Ref CognitoUserPool
-    PETS_TOPIC_ARN: !Ref PetsAlertTopic
-    MATCHES_TOPIC_ARN: !Ref PetsMatchTopic
-    DEFAULT_TOPIC_ARN: !Ref DefaultNotificationTopic
+    PETS_TABLE: pm-pets-${self:provider.stage}
+    USERS_TABLE: pm-users-${self:provider.stage}
+    MATCHES_TABLE: pm-matches-${self:provider.stage}
+    ALERTS_TABLE: pm-alerts-${self:provider.stage}
+    S3_BUCKET: pm-img-anjal-${self:provider.stage}
+    COGNITO_CLIENT_ID: !Ref AuthClient
+    COGNITO_POOL_ID: !Ref AuthPool
+    ALERTS_TOPIC_ARN: arn:aws:sns:${self:provider.region}:${aws:accountId}:pm-alerts-${self:provider.stage}
+    MATCHES_TOPIC_ARN: arn:aws:sns:${self:provider.region}:${aws:accountId}:pm-matches-${self:provider.stage}
     MATCH_THRESHOLD: 80
-  
+
   iam:
     role:
       statements:
@@ -33,13 +31,13 @@ provider:
             - dynamodb:PutItem
             - dynamodb:UpdateItem
             - dynamodb:DeleteItem
-          Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:service}-*"
+          Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/pm-*"
         - Effect: Allow
           Action:
             - s3:GetObject
             - s3:PutObject
             - s3:DeleteObject
-          Resource: "arn:aws:s3:::petmatch-images-*/*"
+          Resource: "arn:aws:s3:::pm-img-anjal-${self:provider.stage}/*"
         - Effect: Allow
           Action:
             - rekognition:CompareFaces
@@ -59,11 +57,19 @@ provider:
 
 functions:
   # Authentication
-  authUser:
-    handler: backend/lambda/auth.authUser
+  authSignIn:
+    handler: backend/lambda/auth.userSignIn
     events:
       - http:
           path: auth/login
+          method: post
+          cors: true
+
+  authSignUp:
+    handler: backend/lambda/auth.userSignUp
+    events:
+      - http:
+          path: auth/signup
           method: post
           cors: true
 
@@ -76,8 +82,9 @@ functions:
           method: post
           cors: true
           authorizer:
-            type: TOKEN
-            identitySource: method.request.header.Authorization
+            type: COGNITO_USER_POOLS
+            name: cognitoAuthorizer
+            arn: !GetAtt AuthPool.Arn
 
   getPets:
     handler: backend/lambda/pets-get.getPets
@@ -86,12 +93,6 @@ functions:
           path: pets
           method: get
           cors: true
-          request:
-            parameters:
-              querystrings:
-                type: false
-                species: false
-                location: false
 
   # User Profile
   getUserProfile:
@@ -102,19 +103,23 @@ functions:
           method: get
           cors: true
           authorizer:
-            type: TOKEN
-            identitySource: method.request.header.Authorization
+            type: COGNITO_USER_POOLS
+            name: cognitoAuthorizer
+            arn: !GetAtt AuthPool.Arn
 
   getUserPets:
     handler: backend/lambda/user-pets.getUserPets
+    environment:
+      PETS_TABLE: pm-pets-dev
     events:
       - http:
-          path: pets/my-reports
+          path: users/pets
           method: get
           cors: true
           authorizer:
-            type: TOKEN
-            identitySource: method.request.header.Authorization
+            type: COGNITO_USER_POOLS
+            name: cognitoAuthorizer
+            arn: !GetAtt AuthPool.Arn
 
   # Image Upload
   getPresignedUrl:
@@ -125,8 +130,22 @@ functions:
           method: post
           cors: true
           authorizer:
-            type: TOKEN
-            identitySource: method.request.header.Authorization
+            type: COGNITO_USER_POOLS
+            name: cognitoAuthorizer
+            arn: !GetAtt AuthPool.Arn
+
+  # Get Matches for User
+  getUserMatches:
+    handler: backend/lambda/user-matches.getUserMatches
+    events:
+      - http:
+          path: users/matches
+          method: get
+          cors: true
+          authorizer:
+            type: COGNITO_USER_POOLS
+            name: cognitoAuthorizer
+            arn: !GetAtt AuthPool.Arn
 
   # Pet Matching (Rekognition)
   matchPets:
@@ -137,8 +156,12 @@ functions:
           method: post
           cors: true
           authorizer:
-            type: TOKEN
-            identitySource: method.request.header.Authorization
+            type: COGNITO_USER_POOLS
+            name: cognitoAuthorizer
+            arn: !GetAtt AuthPool.Arn
+      - sns: 
+          arn: !Ref MatchesTopic
+          topicName: pm-matches-${self:provider.stage}
 
   # Dashboard Stats
   getDashboardStats:
@@ -157,9 +180,6 @@ functions:
           path: notifications/send
           method: post
           cors: true
-          authorizer:
-            type: TOKEN
-            identitySource: method.request.header.Authorization
 
   # Admin Functions
   adminGetUsers:
@@ -169,9 +189,6 @@ functions:
           path: admin/users
           method: get
           cors: true
-          authorizer:
-            type: TOKEN
-            identitySource: method.request.header.Authorization
 
   adminGetDashboard:
     handler: backend/lambda/admin-dashboard.getAdminDashboard
@@ -180,9 +197,6 @@ functions:
           path: admin/dashboard
           method: get
           cors: true
-          authorizer:
-            type: TOKEN
-            identitySource: method.request.header.Authorization
 
   adminGetAllPets:
     handler: backend/lambda/admin-pets.getAllPets
@@ -191,9 +205,10 @@ functions:
           path: admin/pets
           method: get
           cors: true
-          authorizer:
-            type: TOKEN
-            identitySource: method.request.header.Authorization
+
+  # Auth Triggers
+  authPreSignup:
+    handler: backend/lambda/auth-pre-signup.handler
 
   adminGetMatches:
     handler: backend/lambda/admin-matches.getMatches
@@ -203,8 +218,9 @@ functions:
           method: get
           cors: true
           authorizer:
-            type: TOKEN
-            identitySource: method.request.header.Authorization
+            type: COGNITO_USER_POOLS
+            name: cognitoAuthorizer
+            arn: !GetAtt AuthPool.Arn
 
 resources:
   Resources:
@@ -212,7 +228,7 @@ resources:
     PetsTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: ${self:service}-pets-${self:provider.stage}
+        TableName: pm-pets-${self:provider.stage}
         BillingMode: PAY_PER_REQUEST
         AttributeDefinitions:
           - AttributeName: id
@@ -239,7 +255,7 @@ resources:
     UsersTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: ${self:service}-users-${self:provider.stage}
+        TableName: pm-users-${self:provider.stage}
         BillingMode: PAY_PER_REQUEST
         AttributeDefinitions:
           - AttributeName: id
@@ -260,7 +276,7 @@ resources:
     MatchesTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: ${self:service}-matches-${self:provider.stage}
+        TableName: pm-matches-${self:provider.stage}
         BillingMode: PAY_PER_REQUEST
         AttributeDefinitions:
           - AttributeName: id
@@ -278,15 +294,13 @@ resources:
             Projection:
               ProjectionType: ALL
 
-    NotificationsTable:
+    AlertsTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: ${self:service}-notifications-${self:provider.stage}
+        TableName: pm-alerts-${self:provider.stage}
         BillingMode: PAY_PER_REQUEST
         AttributeDefinitions:
           - AttributeName: id
-            AttributeType: S
-          - AttributeName: sentAt
             AttributeType: S
         KeySchema:
           - AttributeName: id
@@ -299,7 +313,7 @@ resources:
     ImagesBucket:
       Type: AWS::S3::Bucket
       Properties:
-        BucketName: petmatch-images-${self:provider.stage}
+        BucketName: pm-img-anjal-${self:provider.stage}
         VersioningConfiguration:
           Status: Enabled
         LifecycleConfiguration:
@@ -309,29 +323,25 @@ resources:
               Status: Enabled
 
     # SNS Topics
-    PetsAlertTopic:
+    AlertsTopic:
       Type: AWS::SNS::Topic
       Properties:
-        TopicName: petmatch-pets-alert-${self:provider.stage}
-        DisplayName: PetMatch Pet Alerts
+        TopicName: pm-alerts-${self:provider.stage}
+        DisplayName: PM Alerts
 
-    PetsMatchTopic:
+    MatchesTopic:
       Type: AWS::SNS::Topic
       Properties:
-        TopicName: petmatch-match-alert-${self:provider.stage}
-        DisplayName: PetMatch Match Alerts
-
-    DefaultNotificationTopic:
-      Type: AWS::SNS::Topic
-      Properties:
-        TopicName: petmatch-notifications-${self:provider.stage}
-        DisplayName: PetMatch Notifications
+        TopicName: pm-matches-${self:provider.stage}
+        DisplayName: PM Matches
 
     # Cognito User Pool
-    CognitoUserPool:
+    AuthPool:
       Type: AWS::Cognito::UserPool
       Properties:
-        UserPoolName: ${self:service}-user-pool-${self:provider.stage}
+        UserPoolName: pm-auth-${self:provider.stage}
+        LambdaConfig:
+          PreSignUp: !GetAtt AuthPreSignupLambdaFunction.Arn
         UsernameAttributes:
           - email
         AutoVerifiedAttributes:
@@ -345,36 +355,40 @@ resources:
             RequireUppercase: true
 
     # Cognito User Pool Client
-    CognitoUserPoolClient:
+    AuthClient:
       Type: AWS::Cognito::UserPoolClient
       Properties:
-        ClientName: ${self:service}-client-${self:provider.stage}
-        UserPoolId: !Ref CognitoUserPool
+        ClientName: pm-client-${self:provider.stage}
+        UserPoolId: !Ref AuthPool
         ExplicitAuthFlows:
           - ADMIN_NO_SRP_AUTH
           - USER_PASSWORD_AUTH
         GenerateSecret: false
 
+    # Permissions for Cognito to trigger Pre Sign-up Lambda
+    AuthPreSignupLambdaPermission:
+      Type: AWS::Lambda::Permission
+      Properties:
+        Action: lambda:InvokeFunction
+        FunctionName: !GetAtt AuthPreSignupLambdaFunction.Arn
+        Principal: cognito-idp.amazonaws.com
+        SourceArn: !GetAtt AuthPool.Arn
+
   Outputs:
     ServiceEndpoint:
-      Description: "URL for the API Gateway"
+      Description: "API URL"
       Value:
         Fn::Join:
           - ""
           - - "https://"
             - Ref: "ApiGatewayRestApi"
             - ".execute-api.${self:provider.region}.amazonaws.com/${self:provider.stage}"
-    CognitoUserPoolId:
-      Description: "Cognito User Pool ID"
-      Value: !Ref CognitoUserPool
-    CognitoClientId:
-      Description: "Cognito Client ID"
-      Value: !Ref CognitoUserPoolClient
-    S3BucketName:
-      Description: "S3 Bucket Name"
+    UserPoolId:
+      Description: "Auth Pool ID"
+      Value: !Ref AuthPool
+    ClientId:
+      Description: "Auth Client ID"
+      Value: !Ref AuthClient
+    BucketName:
+      Description: "Images Bucket"
       Value: !Ref ImagesBucket
-
-plugins:
-  - serverless-offline
-  - serverless-dynamodb-local
-  - serverless-python-requirements

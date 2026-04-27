@@ -1,0 +1,55 @@
+service: pm
+
+provider:
+  name: aws
+  stage: dev
+  region: ap-south-1
+  runtime: nodejs18.x
+  memorySize: 256
+  timeout: 30
+  
+  environment:
+    PETS_TABLE: pm-pets-${self:provider.stage}
+    USERS_TABLE: pm-users-${self:provider.stage}
+    MATCHES_TABLE: pm-matches-${self:provider.stage}
+    ALERTS_TABLE: pm-alerts-${self:provider.stage}
+    S3_BUCKET: pm-img-anjal-${self:provider.stage}
+    COGNITO_CLIENT_ID: !Ref AuthClient
+    COGNITO_POOL_ID: !Ref AuthPool
+    ALERTS_TOPIC_ARN: arn:aws:sns:${self:provider.region}:${aws:accountId}:pm-alerts-${self:provider.stage}
+    MATCHES_TOPIC_ARN: arn:aws:sns:${self:provider.region}:${aws:accountId}:pm-matches-${self:provider.stage}
+    MATCH_THRESHOLD: 80
+
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/pm-*"
+        - Effect: Allow
+          Action:
+            - s3:GetObject
+            - s3:PutObject
+            - s3:DeleteObject
+          Resource: "arn:aws:s3:::pm-img-anjal-${self:provider.stage}/*"
+        - Effect: Allow
+          Action:
+            - rekognition:CompareFaces
+            - rekognition:DetectLabels
+            - rekognition:DetectFaces
+          Resource: "*"
+        - Effect: Allow
+          Action:
+            - sns:Publish
+          Resource: "*"
+        - Effect: Allow
+          Action:
+            - ses:SendEmail
+            - ses:SendRawEmail
+          Resource: "*"

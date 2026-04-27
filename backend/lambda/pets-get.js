@@ -46,6 +46,10 @@ exports.getPets = async (event) => {
         
         return {
             statusCode: 200,
+            headers: {
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Credentials": true
+            },
             body: JSON.stringify({
                 pets: result.Items,
                 count: result.Items.length
@@ -55,6 +59,10 @@ exports.getPets = async (event) => {
         console.error('Get pets error:', error);
         return {
             statusCode: 500,
+            headers: {
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Credentials": true
+            },
             body: JSON.stringify({ message: 'Failed to get pets', error: error.message })
         };
     }

@@ -50,9 +50,9 @@ exports.createPet = async (event) => {
         if (body.receiveNotifications) {
             const sns = new AWS.SNS();
             await sns.publish({
-                TopicArn: process.env.PETS_TOPIC_ARN,
-                Message: `New ${body.type} pet report: ${body.name || 'Unknown'} in ${body.location}`,
-                Subject: `New Pet Alert: ${body.type.toUpperCase()}`
+                TopicArn: process.env.ALERTS_TOPIC_ARN,
+                Message: `New pet reported!\n\nName: ${body.name || 'Unknown'}\nType: ${body.type}\nSpecies: ${body.species}\nLocation: ${body.location}\nDate: ${body.date || timestamp.split('T')[0]}\nContact: ${body.contactPhone || 'N/A'}\n\nImage: ${body.imageUrl || 'No image provided'}`,
+                Subject: `New Pet Reported`
             }).promise();
         }
         
@@ -87,6 +87,10 @@ exports.createPet = async (event) => {
 
         return {
             statusCode: 201,
+            headers: {
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Credentials": true
+            },
             body: JSON.stringify({
                 message: 'Pet report created and matching triggered',
                 petId: petId,
@@ -97,6 +101,10 @@ exports.createPet = async (event) => {
         console.error('Create pet error:', error);
         return {
             statusCode: 500,
+            headers: {
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Credentials": true
+            },
             body: JSON.stringify({ message: 'Failed to create pet report', error: error.message })
         };
     }

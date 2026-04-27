@@ -1,264 +1,248 @@
-// ==================== CONFIG ====================
-const API_BASE = CONFIG.API_BASE_URL;
+// AWS Configuration
+const AWS_REGION = 'ap-south-1';
+const COGNITO_POOL_ID = 'ap-south-1_cxxYRwI9X';
+const COGNITO_CLIENT_ID = '3cg7oidr4jpl1g22100qapf1og';
+const API_GATEWAY_URL = 'https://yy7uzqcse9.execute-api.ap-south-1.amazonaws.com/dev';
 
-// ==================== AUTH SERVICE ====================
+let currentUser = null;
+let idToken = null;
 
-class AuthService {
-    constructor() {
-        this.currentUser = null;
-        this.authToken = localStorage.getItem('authToken');
-        this.refreshToken = localStorage.getItem('refreshToken');
-    }
-
-    getAuthToken() {
-        return this.authToken || localStorage.getItem("authToken");
-    }
-
-    // ==================== VALIDATIONS ====================
-    
-
-    validatePasswordStrength(password) {
-        let score = 0;
-
-        if (password.length >= 8) score++;
-        if (/[A-Z]/.test(password)) score++;
-        if (/[a-z]/.test(password)) score++;
-        if (/[0-9]/.test(password)) score++;
-        if (/[!@#$%^&*]/.test(password)) score++;
-
-        return score;
-    }
-
-    validateEmail(email) {
-        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-    }
-
-    validatePhone(phone) {
-        return /^[0-9]{10,15}$/.test(phone.replace(/\s/g, ''));
-    }
-
-    // ==================== SIGNUP ====================
-
-    async signUp(formData) {
-        try {
-            console.log("🔥 SIGNUP STARTED");
-
-            if (!formData.name || formData.name.length < 2)
-                throw new Error("Invalid name");
-
-            if (!this.validateEmail(formData.email))
-                throw new Error("Invalid email");
-
-            if (!this.validatePhone(formData.phone))
-                throw new Error("Invalid phone");
-
-            if (this.validatePasswordStrength(formData.password) < 3)
-                throw new Error("Weak password");
-
-            console.log("📡 API CALL:", `${API_BASE}/users`);
-
-            const response = await fetch(`${API_BASE}${CONFIG.ENDPOINTS.SIGNUP}`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    name: formData.name,
-                    email: formData.email,
-                    phone: formData.phone,
-                    password: formData.password
-                })
-            });
-
-            const data = await response.json();
-            console.log("📥 RESPONSE:", data);
-
-            if (!response.ok) {
-                throw new Error(data.message || "Signup failed");
-            }
-
-            return data;
-
-        } catch (err) {
-            console.error("❌ SIGNUP ERROR:", err);
-            throw err;
-        }
-    }
-
-    // ==================== LOGIN ====================
-
-    async signIn(email, password) {
-        try {
-            console.log("🔥 LOGIN STARTED");
-
-            if (!email || !password)
-                throw new Error("Email & password required");
-
-            console.log("📡 API CALL:", `${API_BASE}${CONFIG.ENDPOINTS.LOGIN}`);
-
-            const response = await fetch(`${API_BASE}${CONFIG.ENDPOINTS.LOGIN}`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    email: email,
-                    password: password
-                })
-            });
-
-            const data = await response.json();
-            console.log("📥 RESPONSE:", data);
-
-            if (!response.ok) {
-                throw new Error(data.message || "Login failed");
-            }
-
-            // store tokens if backend returns them
-            if (data.tokens) {
-                this.storeTokens(data.tokens);
-                this.currentUser = data.user;
-                const user = {
-                    name: data.user?.name,
-                    email: data.user?.email || data.email // fallback
-                };
-                localStorage.setItem("user", JSON.stringify(user));
-            }
-
-            return data;
-
-        } catch (err) {
-            console.error("❌ LOGIN ERROR:", err);
-            throw err;
-        }
-    }
-
-    // ==================== TOKEN STORAGE ====================
-
-    storeTokens(tokens) {
-        localStorage.setItem("authToken", tokens.accessToken);
-        localStorage.setItem("refreshToken", tokens.refreshToken);
-        this.authToken = tokens.accessToken;
-    }
-
-    isAuthenticated() {
-        return !!this.authToken;
-    }
-
-    logout() {
-        localStorage.clear();
-        this.currentUser = null;
-        this.authToken = null;
-    }
-}
-
-const authService = new AuthService();
-
-// ==================== DOM EVENTS ====================
-
-document.addEventListener("DOMContentLoaded", () => {
-
-    console.log("✅ DOM LOADED");
-
-    // SWITCH FORMS
-    document.getElementById("switch-to-signup")?.addEventListener("click", (e) => {
-        e.preventDefault();
-        document.getElementById("login-section")?.classList.remove("active");
-        document.getElementById("signup-section")?.classList.add("active");
-    });
-
-    document.getElementById("switch-to-login")?.addEventListener("click", (e) => {
-        e.preventDefault();
-        document.getElementById("signup-section")?.classList.remove("active");
-        document.getElementById("login-section")?.classList.add("active");
-    });
-
-    // ==================== LOGIN ====================
-
-    const loginForm = document.getElementById("login-form");
-
-    if (loginForm) {
-        loginForm.addEventListener("submit", async (e) => {
-            e.preventDefault();
-
-            const email = document.getElementById("login-email")?.value;
-            const password = document.getElementById("login-password")?.value;
-
-            try {
-                await authService.signIn(email, password);
-                showMessage("Login success!", "success");
-
-                setTimeout(() => {
-                    window.location.href = "index.html";
-                }, 1000);
-
-            } catch (err) {
-                showMessage(err.message, "error");
-            }
-        });
-    }
-
-    // ==================== SIGNUP ====================
-
-    const signupForm = document.getElementById("signup-form");
-
-    if (signupForm) {
-        signupForm.addEventListener("submit", async (e) => {
-            e.preventDefault();
-
-            const formData = {
-                name: document.getElementById("signup-name")?.value,
-                email: document.getElementById("signup-email")?.value,
-                phone: document.getElementById("signup-phone")?.value,
-                password: document.getElementById("signup-password")?.value
-            };
-
-            const agree = document.getElementById("agree-terms")?.checked;
-
-            if (!agree) {
-                showMessage("Accept terms", "error");
-                return;
-            }
-
-            try {
-                await authService.signUp(formData);
-                localStorage.setItem("user", JSON.stringify({
-                    name: formData.name,
-                    email: formData.email
-                }));
-                showMessage("Signup success!", "success");
-
-                setTimeout(() => {
-                    window.location.href = "index.html";
-                }, 1000);
-
-            } catch (err) {
-                showMessage(err.message, "error");
-            }
-        });
-    }
+// Initialize AWS Cognito
+const userPool = new AmazonCognitoIdentity.CognitoUserPool({
+    UserPoolId: COGNITO_POOL_ID,
+    ClientId: COGNITO_CLIENT_ID
 });
 
-// ==================== UI ====================
+// Check for existing session on page load
+document.addEventListener('DOMContentLoaded', () => {
+    // Always start at auth page by default
+    showPage('auth-page');
+    updateNavbar(false);
+    
+    // Check if we should auto-login
+    checkSession();
+    
+    // Switch between Login and Signup
+    document.getElementById('switch-to-signup')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        document.getElementById('login-section').classList.remove('active');
+        document.getElementById('signup-section').classList.add('active');
+    });
 
-function showMessage(msg, type) {
-    console.log(`${type.toUpperCase()}:`, msg);
+    document.getElementById('switch-to-login')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        document.getElementById('signup-section').classList.remove('active');
+        document.getElementById('login-section').classList.add('active');
+    });
 
-    const el = document.getElementById("auth-message");
-    if (!el) return;
+    // Handle Signup
+    document.getElementById('signup-form')?.addEventListener('submit', handleSignup);
 
-    el.textContent = msg;
-    el.className = `auth-message ${type}`;
+    // Handle Login
+    document.getElementById('login-form')?.addEventListener('submit', handleLogin);
+
+    // Handle Logout
+    document.getElementById('nav-logout')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        handleLogout();
+    });
+});
+
+// Authentication Functions
+async function handleLogin(e) {
+    e.preventDefault();
+    
+    const email = document.getElementById('login-email').value;
+    const password = document.getElementById('login-password').value;
+    const messageDiv = document.getElementById('auth-message');
+    
+    try {
+        const authenticationDetails = new AmazonCognitoIdentity.AuthenticationDetails({
+            Username: email,
+            Password: password
+        });
+
+        const userData = {
+            Username: email,
+            Pool: userPool
+        };
+
+        const cognitoUser = new AmazonCognitoIdentity.CognitoUser(userData);
+
+        cognitoUser.authenticateUser(authenticationDetails, {
+            onSuccess: function(result) {
+                idToken = result.getIdToken().getJwtToken();
+                localStorage.setItem('idToken', idToken);
+                
+                // Store userSub for matching logic
+                const payload = result.getIdToken().decodePayload();
+                localStorage.setItem('userSub', payload.sub);
+                
+                showToast('Login successful!', 'success');
+                showPage('home-page');
+                updateNavbar(true);
+                loadHomeStats();
+            },
+            onFailure: function(err) {
+                if (messageDiv) {
+                    messageDiv.textContent = 'Login failed: ' + err.message;
+                    messageDiv.className = 'auth-message error';
+                }
+            }
+        });
+    } catch (error) {
+        if (messageDiv) {
+            messageDiv.textContent = 'Error: ' + error.message;
+            messageDiv.className = 'auth-message error';
+        }
+    }
 }
 
-function checkPasswordStrength(password) {
-    let score = 0;
+async function handleSignup(e) {
+    e.preventDefault();
+    
+    const name = document.getElementById('signup-name').value;
+    const email = document.getElementById('signup-email').value;
+    const phone = document.getElementById('signup-phone').value;
+    const password = document.getElementById('signup-password').value;
+    const confirmPassword = document.getElementById('signup-confirm').value;
+    const messageDiv = document.getElementById('auth-message');
 
-    if (password.length >= 8) score++;
-    if (/[A-Z]/.test(password)) score++;
-    if (/[a-z]/.test(password)) score++;
-    if (/[0-9]/.test(password)) score++;
-    if (/[^A-Za-z0-9]/.test(password)) score++;
+    if (password.length < 8) {
+        messageDiv.textContent = 'Password must be at least 8 characters long';
+        messageDiv.className = 'auth-message error';
+        return;
+    }
 
-    return score;
+    if (password !== confirmPassword) {
+        messageDiv.textContent = 'Passwords do not match';
+        messageDiv.className = 'auth-message error';
+        return;
+    }
+    
+    try {
+        const attributeList = [
+            new AmazonCognitoIdentity.CognitoUserAttribute({ Name: 'email', Value: email }),
+            new AmazonCognitoIdentity.CognitoUserAttribute({ Name: 'name', Value: name }),
+            new AmazonCognitoIdentity.CognitoUserAttribute({ Name: 'phone_number', Value: phone.startsWith('+') ? phone : '+91' + phone })
+        ];
+
+        userPool.signUp(email, password, attributeList, null, function(err, result) {
+            if (err) {
+                console.error('Cognito SignUp Error:', err);
+                if (messageDiv) {
+                    messageDiv.textContent = 'Sign up failed: ' + err.message;
+                    messageDiv.className = 'auth-message error';
+                }
+            } else {
+                if (messageDiv) {
+                    messageDiv.textContent = 'Sign up successful! Please check your email for verification, then sign in.';
+                    messageDiv.className = 'auth-message success';
+                }
+                // Switch to login form after success
+                setTimeout(() => {
+                    document.getElementById('switch-to-login').click();
+                }, 3000);
+            }
+        });
+    } catch (error) {
+        if (messageDiv) {
+            messageDiv.textContent = 'Error: ' + error.message;
+            messageDiv.className = 'auth-message error';
+        }
+    }
+}
+
+function handleLogout() {
+    const cognitoUser = userPool.getCurrentUser();
+    if (cognitoUser) {
+        cognitoUser.signOut();
+    }
+    localStorage.removeItem('idToken');
+    idToken = null;
+    showPage('auth-page');
+    updateNavbar(false);
+}
+
+function checkSession() {
+    const cognitoUser = userPool.getCurrentUser();
+    if (cognitoUser) {
+        cognitoUser.getSession((err, session) => {
+            if (err || !session.isValid()) {
+                updateNavbar(false);
+                showPage('auth-page');
+            } else {
+                idToken = session.getIdToken().getJwtToken();
+                localStorage.setItem('idToken', idToken);
+                
+                // Store userSub for matching logic
+                const payload = session.getIdToken().decodePayload();
+                localStorage.setItem('userSub', payload.sub);
+                
+                updateNavbar(true);
+                showPage('home-page');
+                loadHomeStats();
+            }
+        });
+    } else {
+        updateNavbar(false);
+        showPage('auth-page');
+    }
+}
+
+// Utility functions
+async function apiCall(endpoint, method = 'GET', data = null) {
+    const options = {
+        method,
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': idToken
+        }
+    };
+
+    if (data) {
+        options.body = JSON.stringify(data);
+    }
+
+    const response = await fetch(API_GATEWAY_URL + endpoint, options);
+    const result = await response.json();
+
+    if (!response.ok) {
+        if (response.status === 401) {
+            handleLogout();
+        }
+        throw new Error(result.message || 'API request failed');
+    }
+
+    return result;
+}
+
+function updateNavbar(isLoggedIn) {
+    const nav = document.querySelector('.navbar');
+    if (isLoggedIn) {
+        nav.style.display = 'block';
+    } else {
+        nav.style.display = 'none';
+    }
+}
+
+function showPage(pageId) {
+    document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
+    document.getElementById(pageId).style.display = 'block';
+}
+
+function showToast(message, type = 'info') {
+    const toastContainer = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `
+        <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-info-circle'}"></i>
+        <span>${message}</span>
+    `;
+    toastContainer.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.classList.add('fade-out');
+        setTimeout(() => toast.remove(), 500);
+    }, 3000);
 }
